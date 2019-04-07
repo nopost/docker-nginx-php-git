@@ -1,7 +1,13 @@
 #!/bin/bash
 
-# Disable Strict Host checking for non interactive git clones
+#proxy
+if [ ! -z "$HTTP_PROXY" ]; then
+  export http_proxy=$HTTP_PROXY
+  export https_proxy=$HTTP_PROXY
+  export ftp_proxy=$HTTP_PROXY
+fi
 
+# Disable Strict Host checking for non interactive git clones
 mkdir -p -m 0700 /root/.ssh
 echo -e "Host *\n\tStrictHostKeyChecking no\n" >> /root/.ssh/config
 
