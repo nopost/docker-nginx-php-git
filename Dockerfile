@@ -5,14 +5,20 @@ MAINTAINER ngineered <support@ngineered.co.uk>
 ENV php_conf /etc/php7/php.ini 
 ENV fpm_conf /etc/php7/php-fpm.d/www.conf
 
-RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repositories && \
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories && \  	
     sed -i -e "s/v3.4/edge/" /etc/apk/repositories && \
     echo /etc/apk/respositories && \
     apk update && \
     apk add --no-cache bash \ 
     openssh-client \
     wget \
+    base \
+    rsync \
+    augeas \
+    e2fsprogs \
+    nfs-utils \
     nginx \
+    openssh-server \
     supervisor \
     curl \
     git \
@@ -60,7 +66,14 @@ RUN echo @testing http://nl.alpinelinux.org/alpine/edge/testing >> /etc/apk/repo
     pip install -U pip && \
     pip install -U certbot && \
     mkdir -p /etc/letsencrypt/webrootauth && \
-    apk del gcc musl-dev linux-headers libffi-dev augeas-dev python-dev
+    apk del gcc musl-dev linux-headers libffi-dev augeas-dev python-dev && \
+    deluser $(getent passwd 33 | cut -d: -f1) && \
+    delgroup $(getent group 33 | cut -d: -f1) 2>/dev/null || true && \
+    mkdir -p ~root/.ssh /etc/authorized_keys && chmod 700 ~root/.ssh/ && \
+    augtool 'set /files/etc/ssh/sshd_config/AuthorizedKeysFile ".ssh/authorized_keys /etc/authorized_keys/%u"' && \
+    echo -e "Port 22\n" >> /etc/ssh/sshd_config && \
+    cp -a /etc/ssh /etc/ssh.cache && \
+    mkdir -p -m0755 /var/run/sshd && \
     
 ADD conf/supervisord.conf /etc/supervisord.conf
 
@@ -135,7 +148,7 @@ RUN chmod +x /usr/bin/hook-listener
 # copy in code
 ADD src/ /var/www/html/
 
-EXPOSE 443 80 8555
+EXPOSE 443 80 22 8555
 
 #CMD ["/usr/bin/supervisord", "-n", "-c",  "/etc/supervisord.conf"]
 CMD ["/start.sh"]
